@@ -319,5 +319,13 @@ console.log('== 日別の日付はローカル日(UTC ではない) ==');
   fs.rmSync(tmpTz, { recursive: true, force: true });
 }
 
+console.log('== --days の誤りは拒否 ==');
+{
+  const code = (v) => { try { execFileSync('node', [BIN, '--base-dir', tmp, '--daily', '--days', v], { encoding: 'utf8', env, stdio: 'pipe' }); return 0; } catch (e) { return e.status; } };
+  ok('★--days -3 は exit 2(「記録なし」に化けない)', code('-3') === 2);
+  ok('★--days abc は exit 2(全期間に化けない)', code('abc') === 2);
+  ok('--days 7 は通る', code('7') === 0);
+}
+
 console.log(`\n結果: ${pass} pass / ${fail} fail`);
 process.exit(fail ? 1 : 0);

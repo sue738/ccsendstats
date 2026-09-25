@@ -97,6 +97,12 @@ function parseArgs(argv) {
       process.exit(2);
     }
   }
+  // --days -3 put the cutoff in the future and reported "no requests";
+  // --days abc was dropped and every day was counted.
+  if (o.days != null && !(Number.isFinite(o.days) && o.days > 0)) {
+    console.error(L('--days: expected a positive number', '--days: 正の数で指定してください'));
+    process.exit(2);
+  }
   return o;
 }
 
