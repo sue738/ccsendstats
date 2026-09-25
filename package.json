@@ -1,6 +1,6 @@
 {
   "name": "ccsendstats",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "See what your Claude Code session actually sends to the API: real token totals per request, a category breakdown, and the invisible overhead you never see. Includes an optional live proxy for the bytes a transcript cannot show.",
   "bin": {
     "ccsendstats": "bin/ccsendstats.js"

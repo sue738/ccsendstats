@@ -37,6 +37,8 @@ First request: 34,979 tokens went out before your first message (your message: 6
 That last line is the point: the gap between what you typed and what went out
 is measured from your own data, not from a blog post.
 
+> Also for Codex CLI, Gemini CLI and Cursor: [agstats](https://github.com/sue738/agstats) reads every agent's transcripts side by side (`npx agstats sends`).
+
 ## Honest limitations — read this first
 
 - **Totals are real; the breakdown is an estimate.** Per-request totals come
