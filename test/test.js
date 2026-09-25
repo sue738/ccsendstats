@@ -140,8 +140,9 @@ const pdir2 = path.join(tmp2, '-home-u-demo');
 fs.mkdirSync(pdir2, { recursive: true });
 const nowIso = new Date().toISOString();
 const twoDaysAgoIso = new Date(Date.now() - 2 * 86400000).toISOString();
-const day1Date = twoDaysAgoIso.slice(0, 10);
-const day2Date = nowIso.slice(0, 10);
+// buckets are local days (W.dayKey), not the UTC day of the ISO string
+const day1Date = W.dayKey(Date.parse(twoDaysAgoIso));
+const day2Date = W.dayKey(Date.parse(nowIso));
 const day1 = [
   { type: 'assistant', timestamp: twoDaysAgoIso,
     message: { id: 'd1a', usage: { input_tokens: 100, cache_read_input_tokens: 40000, cache_creation_input_tokens: 0, output_tokens: 50 } } },
@@ -296,6 +297,27 @@ ok('interruptRateはqueued/totalの%', interruptDaily[0].interruptRate === +((1 
 const interruptText = execFileSync('node', [BIN, '--base-dir', tmp6, '--daily', '--interrupt'], { encoding: 'utf8', env });
 ok('テキスト表示にqueued件数を明記', interruptText.includes('queued') || interruptText.includes('実行中に送信'));
 fs.rmSync(tmp6, { recursive: true, force: true });
+
+console.log('== 日別の日付はローカル日(UTC ではない) ==');
+{
+  // 東京の 2026-09-20 08:00 は UTC では 19日 23:00
+  const tmpTz = fs.mkdtempSync(path.join(os.tmpdir(), 'ccsendstats-tz-'));
+  const dir = path.join(tmpTz, '-home-u-tz');
+  fs.mkdirSync(dir);
+  const at = (s) => new Date(Date.parse('2026-09-19T23:00:00Z') + s * 1000).toISOString();
+  const use = { input_tokens: 10, cache_read_input_tokens: 1000, cache_creation_input_tokens: 0, output_tokens: 5 };
+  fs.writeFileSync(path.join(dir, 'tz.jsonl'), [
+    { type: 'user', timestamp: at(0), promptSource: 'typed', message: { role: 'user', content: 'hi' } },
+    { type: 'assistant', timestamp: at(1), message: { id: 'z1', model: 'x', usage: use, content: [{ type: 'text', text: 'ok' }] } },
+  ].map((e) => JSON.stringify(e)).join('\n') + '\n');
+  const tzEnv = Object.assign({}, env, { TZ: 'Asia/Tokyo' });
+  const day = (mode) => JSON.parse(execFileSync('node', [BIN, '--base-dir', tmpTz, '--daily', ...mode, '--json'], { encoding: 'utf8', env: tzEnv })).daily.map((d) => d.date).join(',');
+  ok('★--daily は JST の当日(09-20)', day([]) === '2026-09-20');
+  ok('★--daily --cache も', day(['--cache']) === '2026-09-20');
+  ok('★--daily --baseline も', day(['--baseline']) === '2026-09-20');
+  ok('★--daily --interrupt も', day(['--interrupt']) === '2026-09-20');
+  fs.rmSync(tmpTz, { recursive: true, force: true });
+}
 
 console.log(`\n結果: ${pass} pass / ${fail} fail`);
 process.exit(fail ? 1 : 0);

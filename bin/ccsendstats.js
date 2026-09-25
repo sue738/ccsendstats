@@ -228,7 +228,8 @@ async function collectDaily(o) {
       if (!r.ts) continue;
       const t = Date.parse(r.ts);
       if (sinceMs !== undefined && (Number.isNaN(t) || t < sinceMs)) continue;
-      const day = r.ts.slice(0, 10);
+      // the local day, not the UTC day of the ISO string (an unparseable stamp keeps its old label)
+      const day = Number.isNaN(t) ? r.ts.slice(0, 10) : W.dayKey(t);
       // peakは「その日一番長く続いたセッション」で決まりがちで、セッション数が
       // 多い日ほど構造的に上限へ張り付く(実測: ほぼ毎日90%台で固定)。avgも
       // ターン数で単純加重するとセッション内の後半(値が大きい)に引きずられる。
@@ -289,7 +290,8 @@ async function collectCache(o) {
       if (!r.ts) continue;
       const t = Date.parse(r.ts);
       if (sinceMs !== undefined && (Number.isNaN(t) || t < sinceMs)) continue;
-      const day = r.ts.slice(0, 10);
+      // the local day, not the UTC day of the ISO string (an unparseable stamp keeps its old label)
+      const day = Number.isNaN(t) ? r.ts.slice(0, 10) : W.dayKey(t);
       if (!byDay.has(day)) byDay.set(day, { uncached: 0, write1h: 0, write5m: 0, read: 0, turns: 0 });
       const d = byDay.get(day);
       d.turns += 1;
@@ -383,7 +385,7 @@ async function collectBaseline(o) {
     if (a.baseline == null || !a.first || !a.first.ts) continue;
     const t = Date.parse(a.first.ts);
     if (sinceMs !== undefined && (Number.isNaN(t) || t < sinceMs)) continue;
-    const day = a.first.ts.slice(0, 10);
+    const day = Number.isNaN(t) ? a.first.ts.slice(0, 10) : W.dayKey(t);
     if (!byDay.has(day)) byDay.set(day, { sum: 0, sessions: 0, min: Infinity, max: 0 });
     const d = byDay.get(day);
     d.sum += a.baseline;
@@ -426,7 +428,7 @@ async function collectInterrupt(o) {
       if (src !== 'typed' && src !== 'queued') continue;
       const t = Date.parse(e.timestamp);
       if (sinceMs !== undefined && (Number.isNaN(t) || t < sinceMs)) continue;
-      const day = e.timestamp.slice(0, 10);
+      const day = Number.isNaN(t) ? e.timestamp.slice(0, 10) : W.dayKey(t);
       if (!byDay.has(day)) byDay.set(day, { typed: 0, queued: 0 });
       byDay.get(day)[src]++;
     }
