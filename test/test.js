@@ -40,6 +40,23 @@ ok('empty → 0', W.estTokens('') === 0);
 const sp = W.splitInjected('<system-reminder>abc</system-reminder>hello');
 ok('injected 分離', sp.injected.includes('abc') && sp.rest === 'hello');
 ok('command echo も injected', W.splitInjected('<command-name>/x</command-name>y').injected.includes('/x'));
+{
+  // Claude Code が自分で書く user ターンは「あなたの言葉」ではない
+  const tn = W.splitInjected('<task-notification><task-id>t1</task-id>done</task-notification>');
+  ok('★task-notification は injected(あなたの言葉に入れない)', tn.rest === '' && tn.injected.includes('t1'));
+  const bi = W.splitInjected('<bash-input>ls -la</bash-input>');
+  ok('★bash-input / bash-stdout も injected', bi.rest === '' && W.splitInjected('<bash-stdout>out</bash-stdout><bash-stderr></bash-stderr>').rest === '');
+  ok('★local-command-caveat も injected', W.splitInjected('<local-command-caveat>Caveat: x</local-command-caveat>').rest === '');
+  const rt = [
+    { type: 'user', timestamp: '2026-09-01T00:00:00Z', message: { role: 'user', content: '<bash-input>ls -la</bash-input>' } },
+    { type: 'user', timestamp: '2026-09-01T00:00:01Z', message: { role: 'user', content: '<bash-stdout>' + 'x'.repeat(400) + '</bash-stdout>' } },
+    { type: 'user', timestamp: '2026-09-01T00:00:02Z', promptSource: 'typed', message: { role: 'user', content: 'hi there' } },
+    { type: 'user', timestamp: '2026-09-01T00:00:03Z', promptSource: 'system', message: { role: 'user', content: '<task-notification>' + 'y'.repeat(4000) + '</task-notification>' } },
+  ];
+  ok('★最初の一言は runtime の行を飛ばした人間の発話', W.firstPromptEst(rt).chars === 'hi there'.length);
+  const rv = W.visibleBreakdown(rt);
+  ok('★あなたの言葉は人間の発話だけ', rv.userText === W.estTokens('hi there') && rv.injected > 1000);
+}
 
 console.log('== requestsOf ==');
 const reqs = W.requestsOf(entries);
