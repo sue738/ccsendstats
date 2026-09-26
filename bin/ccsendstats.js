@@ -67,8 +67,11 @@ Usage: ccsendstats [session-id-prefix] [options]
 Totals are REAL (from API usage in the transcript). The category breakdown is
 a byte-based estimate (~4 bytes/token) of what is visible in the transcript;
 the remainder — system prompt, tool definitions, anything not recorded — is
-reported as invisible overhead. --daily's window isn't recorded anywhere, so
-it's inferred per day from the data itself: the smallest of ${W.KNOWN_WINDOWS.map((w) => w.toLocaleString()).join('/')}
+reported as invisible overhead. Attachment lines (skill listings, MCP
+instructions, reminders) count as injected context when they record the text
+they sent (\`rendered\`, Claude Code 2.1.263+); older ones stay in the remainder.
+--daily's window isn't recorded anywhere, so it's inferred per day from the
+data itself: the smallest of ${W.KNOWN_WINDOWS.map((w) => w.toLocaleString()).join('/')}
 tokens that's still at least as big as that day's largest request.`;
 
 function parseArgs(argv) {

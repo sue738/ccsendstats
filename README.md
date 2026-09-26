@@ -51,6 +51,14 @@ is measured from your own data, not from a blog post.
   capture network traffic. Anything that never lands in
   `~/.claude/projects/**/*.jsonl` (the system prompt itself, tool schemas) is
   inferred as the remainder, not observed. It's the zero-setup 95% answer.
+- **Attachment lines count only when they say what was sent.** Newer Claude
+  Code writes injected context (skill listings, MCP instructions, deferred-tool
+  lists, CLAUDE.md / memory, reminders) as `type: "attachment"` lines. Since
+  2.1.263 each carries a `rendered` copy of the text it put in the request;
+  that is counted under "injected context". Attachments without it — older
+  versions, and client-side records such as `prompt_snapshot` (Claude Code's
+  own copy of the system prompt and tool schemas) — are not read, so on older
+  transcripts that context still sits in the invisible remainder.
 - **Thinking blocks** are counted as visible history (they are re-sent when a
   session continues on the same model).
 

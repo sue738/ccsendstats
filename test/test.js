@@ -101,6 +101,34 @@ ok('新ブロック抽出(200tok 以上)', d.newBlocks.length >= 1 && d.newBlock
 ok('preview は80文字以内', d.newBlocks.every((b) => b.preview.length <= 80));
 ok('リクエスト1件では null', W.diffLast(entries.slice(0, 3)) === null);
 
+console.log('== attachment 行(rendered だけが送信分) ==');
+{
+  // 新しい Claude Code は注入コンテキストを type:"attachment" 行に書く。
+  // rendered[].content が実際にリクエストに入った文字列 — これだけを数える。
+  const SK = '<system-reminder>' + 's'.repeat(783) + '</system-reminder>'; // 818 B → 205 tok (204.5 を丸め)
+  const DT = '<system-reminder>' + 'd'.repeat(365) + '</system-reminder>'; // 400 B → 100 tok
+  const at = [
+    { type: 'user', timestamp: 't0', message: { role: 'user', content: 'go' } },
+    { type: 'attachment', timestamp: 't0', attachment: { type: 'skill_listing', content: 'x'.repeat(5000), skillCount: 3 }, rendered: [{ content: SK }] },
+    { type: 'attachment', timestamp: 't0', attachment: { type: 'deferred_tools_delta', addedNames: ['A'] }, rendered: [{ content: DT }, { content: DT }] },
+    // rendered が無い: クライアント側の状態(system prompt の写し等)か、rendered 以前の版 — 数えない
+    { type: 'attachment', timestamp: 't0', attachment: { type: 'prompt_snapshot', systemPrompt: ['p'.repeat(40000)], tools: [] } },
+    { type: 'attachment', timestamp: 't0', attachment: { type: 'skill_listing', content: 'o'.repeat(4000) } },
+    // サイドチェーン / meta の attachment も数えない
+    { type: 'attachment', isSidechain: true, attachment: { type: 'date' }, rendered: [{ content: 'q'.repeat(4000) }] },
+    { type: 'assistant', timestamp: 't1', message: { id: 'r1', usage: { input_tokens: 10, cache_read_input_tokens: 0, cache_creation_input_tokens: 1000, output_tokens: 1 }, content: [{ type: 'text', text: 'ok' }] } },
+  ];
+  ok('★attachmentTexts: rendered の各 content、rendered が無ければ空', W.attachmentTexts(at[2]).length === 2 && W.attachmentTexts(at[3]).length === 0 && W.attachmentTexts(at[0]).length === 0);
+  const av = W.visibleBreakdown(at, 6);
+  ok('★rendered 付き attachment は injected(項目ごとに丸め: 205 + 100 + 100)', av.injected === 405);
+  ok('★rendered の無い attachment(prompt_snapshot・旧版)とサイドチェーンは数えない', av.total === 405 + W.estTokens('go'));
+  const aa = W.analyze(at);
+  ok('★invisible は attachment 分だけ減る', aa.invisible === 1010 - 405 - W.estTokens('go'));
+  ok('attachment は最初の一言にならない', aa.firstPrompt.chars === 2);
+  const ad = W.diffLast([at[0], at[6], ...at.slice(1, 6), { ...at[6], message: { ...at[6].message, id: 'r2' } }]);
+  ok('diff: 大きな attachment は種別つきで新ブロックに出る', ad.delta.injected === 405 && ad.newBlocks[0].kind === 'attachment:skill_listing' && ad.newBlocks[0].est === 205);
+}
+
 console.log('== CLI ==');
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ccsendstats-'));
 const pdir = path.join(tmp, '-home-u-demo');
